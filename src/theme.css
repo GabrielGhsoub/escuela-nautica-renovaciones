@@ -1,0 +1,249 @@
+/* Their two brand colours, sampled from the live site: the button blue
+   rgb(30,115,190) and the deep navy rgb(14,24,95). Everything else is a
+   neutral built around them, so the palette stays theirs. */
+
+:root {
+  --navy: #0e185f;
+  --navy-deep: #080f3c;
+  --blue: #1e73be;
+  --blue-bright: #3b93e0;
+  --foam: #eef4fb;
+  --sand: #f7f5f1;
+  --ink: #10131f;
+  --ink-soft: #454a60;
+  --line: rgba(14, 24, 95, 0.12);
+  --white: #ffffff;
+
+  --display: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --body: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --shell: min(1180px, 100% - 2.5rem);
+  --radius: 18px;
+  --radius-lg: 26px;
+  --shadow: 0 18px 48px -24px rgba(8, 15, 60, 0.4);
+  --shadow-lift: 0 30px 70px -30px rgba(8, 15, 60, 0.5);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--body);
+  color: var(--ink);
+  background: var(--white);
+  line-height: 1.65;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--display);
+  color: var(--navy);
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+  margin: 0 0 0.6em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 5.6vw, 4.15rem);
+}
+h2 {
+  font-size: clamp(1.85rem, 3.6vw, 2.75rem);
+}
+h3 {
+  font-size: clamp(1.15rem, 1.8vw, 1.4rem);
+}
+
+p {
+  margin: 0 0 1.1em;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.shell {
+  width: var(--shell);
+  margin-inline: auto;
+}
+
+.section {
+  padding: clamp(4rem, 9vw, 7.5rem) 0;
+}
+
+.section--tint {
+  background: var(--foam);
+}
+
+.section--sand {
+  background: var(--sand);
+}
+
+.eyebrow {
+  font-family: var(--display);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin: 0 0 1rem;
+}
+
+.lede {
+  font-size: clamp(1.05rem, 1.5vw, 1.22rem);
+  max-width: 62ch;
+  color: var(--ink-soft);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.97rem;
+  letter-spacing: -0.01em;
+  padding: 0.95rem 1.7rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.25s var(--ease), background 0.25s var(--ease),
+    box-shadow 0.25s var(--ease), color 0.25s var(--ease);
+  text-align: center;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn--primary {
+  background: var(--blue);
+  color: var(--white);
+  box-shadow: 0 12px 28px -12px rgba(30, 115, 190, 0.75);
+}
+
+.btn--primary:hover {
+  background: var(--blue-bright);
+  box-shadow: 0 18px 36px -14px rgba(30, 115, 190, 0.85);
+}
+
+.btn--navy {
+  background: var(--navy);
+  color: var(--white);
+}
+
+.btn--navy:hover {
+  background: var(--navy-deep);
+}
+
+.btn--ghost {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: var(--white);
+}
+
+.btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.btn--outline {
+  border-color: var(--line);
+  color: var(--navy);
+  background: var(--white);
+}
+
+.btn--outline:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+/* A small reusable card */
+.card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease),
+    border-color 0.35s var(--ease);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lift);
+  border-color: transparent;
+}
+
+.grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* Cards sit inside a Reveal wrapper, so the wrapper is the grid item and the
+   card only ever grew to its own content. That let a two-line title push one
+   card's price below its neighbours'. Stretch both and the prices line up. */
+.grid > * {
+  height: 100%;
+}
+
+.card {
+  height: 100%;
+}
+
+@media (min-width: 700px) {
+  .grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1000px) {
+  .grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--blue-bright);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
