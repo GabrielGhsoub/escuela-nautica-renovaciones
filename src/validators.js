@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+
 /* The school confirms every request by contacting the person. A request that
    carries "1" as a phone and "pepe@gmail" as an email is unreachable on both
    channels: the visitor believes they asked for a renewal, nobody can call
@@ -11,10 +13,16 @@ export const nombreOk = (v) => {
   return s.length >= 5 && s.includes(' ') && /^[\p{L}\p{M}'’.\- ]+$/u.test(s);
 };
 
+/* Delegated to libphonenumber-js so a French or German holder of a Spanish
+   título is judged by their own country's numbering plan, not by a Spanish
+   regex that happens to accept the right digit count. */
 export const telOk = (v) => {
-  const s = String(v).replace(/[\s.\-()]/g, '');
-  return /^(\+34|0034)?[6-9]\d{8}$/.test(s) // Spanish mobile and landline
-    || /^\+[1-9]\d{7,14}$/.test(s); // E.164, for foreign holders of Spanish titles
+  const s = String(v).trim();
+  if (!s) return false;
+  try {
+    const p = parsePhoneNumberFromString(s, 'ES');
+    return Boolean(p && p.isValid());
+  } catch { return false; }
 };
 
 const HTML5_EMAIL =

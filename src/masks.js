@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+
 /* Live input masks. Typing letters into a date field and watching them stick
    is exactly the kind of detail an owner notices in a demo. These format as
    the visitor types; the validators in validators.js stay the authority. */
@@ -39,4 +41,15 @@ export function formatCaducidad(v) {
   else { mm = d.slice(0, 2); rest = d.slice(2) }
   rest = rest.slice(0, 4)
   return rest ? `${mm}/${rest}` : mm
+}
+
+/* react-international-phone stores E.164 (+34655487716), which is right for a
+   tel: link and wrong for a human. Format only where it is shown. */
+export function prettyTel(v) {
+  const s = String(v || '').trim();
+  if (!s) return s;
+  try {
+    const p = parsePhoneNumberFromString(s, 'ES');
+    return p ? p.formatInternational() : s;
+  } catch { return s; }
 }
