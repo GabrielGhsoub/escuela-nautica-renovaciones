@@ -22,6 +22,9 @@ import {
   documents, included, productLabel, productPrice, products, school, titulin,
 } from './data/renovaciones.js'
 import { caducidadOk, emailOk, nombreOk, telOk } from './validators.js'
+import { formatCaducidad, formatTel } from './masks.js'
+import { addRequest } from './store.js'
+import Admin from './Admin.jsx'
 import './app.css'
 
 const STEPS = ['Qué necesitas', 'Tus datos', 'Enviar']
@@ -31,7 +34,7 @@ const FIELDS = [
     key: 'nombre',
     label: 'Nombre y apellidos',
     hint: 'Como aparece en el título.',
-    input: { name: 'nombre', autoComplete: 'name', autoCapitalize: 'words' },
+    input: { name: 'nombre', autoComplete: 'name', autoCapitalize: 'words', enterKeyHint: 'go' },
     check: nombreOk,
     error: 'Escribe tu nombre y tus apellidos.',
   },
@@ -39,7 +42,8 @@ const FIELDS = [
     key: 'caducidad',
     label: 'Caducidad del título',
     hint: 'Lo pone en tu título. Si no lo tienes a mano, déjalo en blanco.',
-    input: { name: 'caducidad', inputMode: 'numeric', placeholder: 'mm/aaaa', maxLength: 7 },
+    input: { name: 'caducidad', inputMode: 'numeric', placeholder: 'mm/aaaa', maxLength: 7, enterKeyHint: 'go' },
+    mask: formatCaducidad,
     check: caducidadOk,
     error: 'Escríbelo como mm/aaaa, por ejemplo 05/2024.',
     optional: true,
@@ -48,7 +52,8 @@ const FIELDS = [
     key: 'telefono',
     label: 'Teléfono',
     hint: 'Es donde te contestaremos.',
-    input: { name: 'telefono', type: 'tel', inputMode: 'tel', autoComplete: 'tel' },
+    input: { name: 'telefono', type: 'tel', inputMode: 'tel', autoComplete: 'tel', maxLength: 20, enterKeyHint: 'go' },
+    mask: formatTel,
     check: telOk,
     error: 'Necesitamos un teléfono donde poder llamarte.',
   },
@@ -56,7 +61,7 @@ const FIELDS = [
     key: 'email',
     label: 'Correo electrónico',
     hint: '',
-    input: { name: 'email', type: 'email', inputMode: 'email', autoComplete: 'email' },
+    input: { name: 'email', type: 'email', inputMode: 'email', autoComplete: 'email', enterKeyHint: 'go' },
     check: emailOk,
     error: 'Revisa el correo, parece que le falta algo (por ejemplo .com).',
   },
@@ -65,7 +70,19 @@ const FIELDS = [
 const BLANK = { nombre: '', telefono: '', email: '', caducidad: '' }
 
 export default function App() {
+  /* #admin is the other side of the counter. Hash, not a router: one listener
+     is all a two-view demo needs. */
+  const [view, setView] = useState(() => (window.location.hash === '#admin' ? 'admin' : 'site'))
+  useEffect(() => {
+    const onHash = () => setView(window.location.hash === '#admin' ? 'admin' : 'site')
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   const [step, setStep] = useState(0)
+  /* Forward slides in from the right, back from the left, so motion agrees
+     with the mental model of where each screen lives. */
+  const [dir, setDir] = useState('fwd')
   const [picked, setPicked] = useState(null)
   const [form, setForm] = useState(BLANK)
   const [showErrors, setShowErrors] = useState(false)
@@ -94,6 +111,32 @@ export default function App() {
     if (step > 0 && !product) { setStep(0); setSent(false) }
   }, [step, product])
 
+  function go(n) {
+    setDir(n < step ? 'back' : 'fwd')
+    setStep(n)
+  }
+
+  /* Reformatting a controlled input throws the caret to the end; counting
+     digits left of the caret and re-seating it keeps mid-string edits sane. */
+  function maskedChange(f) {
+    return (e) => {
+      const el = e.target
+      if (!f.mask) { setForm((prev) => ({ ...prev, [f.key]: el.value })) ; return }
+      const digitsLeft = el.value.slice(0, el.selectionStart ?? el.value.length).replace(/\D/g, '').length
+      const next = f.mask(el.value)
+      setForm((prev) => ({ ...prev, [f.key]: next }))
+      requestAnimationFrame(() => {
+        let pos = 0
+        let seen = 0
+        while (pos < next.length && seen < digitsLeft) {
+          if (/\d/.test(next[pos])) seen += 1
+          pos += 1
+        }
+        try { el.setSelectionRange(pos, pos) } catch { /* not all inputs allow it */ }
+      })
+    }
+  }
+
   function submitDatos(e) {
     e.preventDefault()
     const bad = FIELDS.find((f) => errors[f.key])
@@ -102,16 +145,36 @@ export default function App() {
       inputs.current[bad.key]?.focus()
       return
     }
-    setStep(2)
+    go(2)
+  }
+
+  /* A fast double-tap on the send button must not file the request twice. */
+  const filed = useRef(false)
+  function send() {
+    if (filed.current) return
+    filed.current = true
+    addRequest({
+      nombre: form.nombre,
+      telefono: form.telefono,
+      email: form.email,
+      caducidad: form.caducidad,
+      tramite: productLabel(product),
+      precio: productPrice(product),
+    })
+    setSent(true)
   }
 
   function restart() {
+    filed.current = false
     setSent(false)
+    setDir('back')
     setStep(0)
     setPicked(null)
     setForm(BLANK)
     setShowErrors(false)
   }
+
+  if (view === 'admin') return <Admin />
 
   return (
     <div className="page">
@@ -160,13 +223,17 @@ export default function App() {
             <p className="done__echo">
               Te contestaríamos al <strong>{form.telefono}</strong> o a <strong>{form.email}</strong>.
             </p>
+            <p className="done__admin">
+              ¿Quieres ver cómo lo recibiría la escuela?{' '}
+              <a href="#admin">Abre el panel de la escuela</a>: tu solicitud ya está ahí.
+            </p>
             <div className="done__docs">
               <h3>Ten preparado</h3>
               <ul>{documents.map((d) => <li key={d}>{d}</li>)}</ul>
               <p className="done__docsnote">No los subas aquí.</p>
             </div>
             <div className="nav nav--done">
-              <button type="button" className="btn btn--ghost" onClick={() => { setSent(false); setStep(1) }}>
+              <button type="button" className="btn btn--ghost" onClick={() => { filed.current = false; setSent(false); setDir('back'); setStep(1) }}>
                 Corregir mis datos
               </button>
               <button type="button" className="btn btn--ghost" onClick={restart}>
@@ -190,7 +257,7 @@ export default function App() {
             </ol>
 
               {step === 0 && (
-                <div key="a">
+                <div key="a" className={`stp stp--${dir}`}>
                   <h2 className="ask" tabIndex={-1} ref={ask}>¿Qué título necesitas renovar?</h2>
                   <div className="prods">
                     {products.map((p) => (
@@ -198,7 +265,7 @@ export default function App() {
                         key={p.key} type="button"
                         className={`prod${picked === p.key ? ' is-on' : ''}`}
                         aria-pressed={picked === p.key}
-                        onClick={() => { setPicked(p.key); setStep(1) }}
+                        onClick={() => { setPicked(p.key); go(1) }}
                       >
                         <strong>{p.title}</strong>
                         <em>{p.full}</em>
@@ -218,7 +285,7 @@ export default function App() {
               )}
 
               {step === 1 && (
-                <form key="b" noValidate onSubmit={submitDatos}>
+                <form key="b" className={`stp stp--${dir}`} noValidate onSubmit={submitDatos}>
                   <h2 className="ask" tabIndex={-1} ref={ask}>Tus datos</h2>
                   <div className="recap">
                     {productLabel(product)} · {productPrice(product)}
@@ -238,7 +305,7 @@ export default function App() {
                           value={form[f.key]}
                           aria-invalid={bad || undefined}
                           aria-describedby={describedBy}
-                          onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                          onChange={maskedChange(f)}
                         />
                         {bad
                           ? <span className="f__err" id={`err-${f.key}`}>{errors[f.key]}</span>
@@ -247,19 +314,20 @@ export default function App() {
                     )
                   })}
                   <p className="privacidad">
-                    Esta página es una demostración y no guarda ni envía nada. En la
-                    versión real, {school.name} usaría estos datos solo para contestarte
-                    sobre esta renovación (<a href={school.privacyUrl}>política de privacidad</a>).
+                    Esta página es una demostración: no envía nada y lo que escribes
+                    queda solo en tu navegador. En la versión real, {school.name} usaría
+                    estos datos solo para contestarte sobre esta renovación
+                    (<a href={school.privacyUrl}>política de privacidad</a>).
                   </p>
                   <div className="nav">
-                    <button type="button" className="btn btn--ghost" onClick={() => setStep(0)}>Atrás</button>
+                    <button type="button" className="btn btn--ghost" onClick={() => go(0)}>Atrás</button>
                     <button type="submit" className="btn btn--primary">Continuar</button>
                   </div>
                 </form>
               )}
 
               {step === 2 && (
-                <div key="c">
+                <div key="c" className={`stp stp--${dir}`}>
                   <h2 className="ask" tabIndex={-1} ref={ask}>Revisa y envía</h2>
                   <dl className="review">
                     <div><dt>Trámite</dt><dd>{productLabel(product)}</dd></div>
@@ -276,8 +344,8 @@ export default function App() {
                   </div>
                   <p className="nopay">No se paga nada en esta página.</p>
                   <div className="nav">
-                    <button type="button" className="btn btn--ghost" onClick={() => setStep(1)}>Atrás</button>
-                    <button type="button" className="btn btn--primary" onClick={() => setSent(true)}>
+                    <button type="button" className="btn btn--ghost" onClick={() => go(1)}>Atrás</button>
+                    <button type="button" className="btn btn--primary" onClick={send}>
                       Enviar solicitud
                     </button>
                   </div>
@@ -295,7 +363,8 @@ export default function App() {
           </p>
           <p className="foot__demo">
             Página de demostración creada por Likwiid con los contenidos públicos de la
-            escuela. No envía ni cobra nada.
+            escuela. No envía ni cobra nada ·{' '}
+            <a href="#admin">panel de la escuela</a>
           </p>
         </div>
       </footer>
