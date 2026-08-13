@@ -25,16 +25,17 @@ import 'react-international-phone/style.css'
 import {
   documents, included, productLabel, productPrice, products, school, titulin,
 } from './data/renovaciones.js'
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { caducidadOk, emailOk, nombreOk, telOk } from './validators.js'
 import { formatCaducidad, prettyTel } from './masks.js'
-import { addRequest } from './store.js'
+import { upsertRequest } from './store.js'
 import Field from './components/Field.jsx'
 import MonthPicker from './components/MonthPicker.jsx'
 import Admin from './Admin.jsx'
 import './app.css'
 
 const STEPS = ['Qué necesitas', 'Tus datos', 'Enviar']
-const BLANK = { nombre: '', telefono: '', email: '', caducidad: '' }
+const BLANK = { nombre: '', telefono: '', email: '', caducidad: '', telDisplay: '' }
 const ORDER = ['nombre', 'caducidad', 'telefono', 'email']
 const EASE = [0.22, 1, 0.36, 1]
 
@@ -85,6 +86,14 @@ export default function App() {
   const [showErrors, setShowErrors] = useState(false)
   const [sent, setSent] = useState(false)
   const [calOpen, setCalOpen] = useState(false)
+  /* The panel is inert while it slides in: a double tap on a product card used
+     to have its second click land on the incoming panel and drop focus to
+     <body>, costing a screen-reader user the new step's announcement. */
+  const [busy, setBusy] = useState(false)
+  /* The library keeps its own ref to reposition the caret after re-masking and
+     to refocus after a country pick. Passing ours through inputProps replaced
+     it, so mid-number edits jumped to the end and picking a country lost focus. */
+  const telRef = useRef(null)
 
   /* The library hardcodes aria-label="Country selector" in English. The option
      names localize through the `countries` prop, but the trigger does not, so
@@ -111,8 +120,11 @@ export default function App() {
     email: checks.email ? '' : 'Revisa el correo, parece que le falta algo (por ejemplo .com).',
     caducidad: checks.caducidad ? '' : 'Escríbelo como mm/aaaa, por ejemplo 05/2026.',
   }
-  const filled = ORDER.filter((k) => (k === 'caducidad' ? form.caducidad && checks[k] : checks[k])).length
-  const progress = Math.round((filled / ORDER.length) * 100)
+  /* Only the three required fields count. Caducidad's own hint tells people to
+     leave it blank, so including it capped the honest path at 75%. */
+  const REQUIRED = ['nombre', 'telefono', 'email']
+  const filled = REQUIRED.filter((k) => checks[k]).length
+  const progress = Math.round((filled / REQUIRED.length) * 100)
 
   const ask = useRef(null)
   const inputs = useRef({})
@@ -126,9 +138,31 @@ export default function App() {
     if (step > 0 && !product) { setStep(0); setSent(false) }
   }, [step, product])
 
+  /* Submitting with Enter never fires a mousedown, so the picker's outside-click
+     handler never ran and it reopened by itself on the way back. */
+  useEffect(() => { if (step !== 1) setCalOpen(false) }, [step])
+
+  /* Some password managers assign .value without firing an input event: the
+     field looks filled, state is empty, and the next render blanks it. */
+  useEffect(() => {
+    if (step !== 1) return undefined
+    const id = setTimeout(() => setForm((f) => {
+      let changed = false
+      const next = { ...f }
+      for (const k of ['nombre', 'email']) {
+        const el = inputs.current[k]
+        if (el?.value && el.value !== f[k]) { next[k] = el.value; changed = true }
+      }
+      return changed ? next : f
+    }), 400)
+    return () => clearTimeout(id)
+  }, [step])
+
   function go(n) {
     setDir(n < step ? 'back' : 'fwd')
     setStep(n)
+    setBusy(true)
+    setTimeout(() => setBusy(false), 280)
   }
 
   function submitDatos(e) {
@@ -136,7 +170,7 @@ export default function App() {
     const bad = ORDER.find((k) => errors[k])
     if (bad) {
       setShowErrors(true)
-      const el = inputs.current[bad]
+      const el = bad === 'telefono' ? telRef.current : inputs.current[bad]
       el?.focus()
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
       return
@@ -145,12 +179,13 @@ export default function App() {
   }
 
   const filedRef = useRef(false)
+  const filedIdRef = useRef(null)
   function send() {
     if (filedRef.current) return
     filedRef.current = true
-    addRequest({
+    filedIdRef.current = upsertRequest(filedIdRef.current, {
       nombre: form.nombre,
-      telefono: prettyTel(form.telefono),
+      telefono: form.telDisplay || prettyTel(form.telefono),
       email: form.email,
       caducidad: form.caducidad,
       tramite: productLabel(product),
@@ -161,6 +196,7 @@ export default function App() {
 
   function restart() {
     filedRef.current = false
+    filedIdRef.current = null
     setSent(false)
     setDir('back')
     setStep(0)
@@ -233,7 +269,7 @@ export default function App() {
                   contacto contigo. No se paga nada en esta página.
                 </p>
                 <p className="done__echo">
-                  Te contestaríamos al <strong>{prettyTel(form.telefono)}</strong> o a <strong>{form.email}</strong>.
+                  Te contestaríamos al <strong>{form.telDisplay || prettyTel(form.telefono)}</strong> o a <strong>{form.email}</strong>.
                 </p>
                 <p className="done__admin">
                   ¿Quieres ver cómo lo recibiría la escuela?{' '}
@@ -280,7 +316,7 @@ export default function App() {
                 </ol>
 
                 <div className="flow">
-                    <div key={step} className={`stp stp--${dir}`}>
+                    <div key={step} className={`stp stp--${dir}`} style={busy ? { pointerEvents: 'none' } : undefined}>
                     {step === 0 && (
                       <div>
                         <h2 className="ask" tabIndex={-1} ref={ask}>¿Qué título necesitas renovar?</h2>
@@ -367,7 +403,7 @@ export default function App() {
                           <MonthPicker
                             open={calOpen} value={form.caducidad} anchorId="cal-btn"
                             onClose={() => setCalOpen(false)}
-                            onPick={(mm, yyyy) => { setForm({ ...form, caducidad: `${mm}/${yyyy}` }); setTouched((t) => ({ ...t, caducidad: true })) }}
+                            onPick={(mm, yyyy) => { setForm((f) => ({ ...f, caducidad: mm ? `${mm}/${yyyy}` : `/${yyyy}` })); setTouched((t) => ({ ...t, caducidad: true })) }}
                           />
                         </div>
 
@@ -383,13 +419,35 @@ export default function App() {
                               defaultCountry="es"
                               countries={COUNTRIES_ES}
                               flags={FLAGS_INLINE}
+                              forceDialCode
+                              inputRef={telRef}
                               value={form.telefono}
-                              onChange={(v) => setForm({ ...form, telefono: v })}
+                              onChange={(v, meta) => setForm((f) => {
+                                /* Changing country used to discard the digits already
+                                   typed. Carry the subscriber number across. */
+                                const bare = v.replace(/\D/g, '')
+                                if (meta?.country && bare === meta.country.dialCode && f.telefono) {
+                                  const prev = parsePhoneNumberFromString(f.telefono, 'ES')
+                                  if (prev?.nationalNumber) {
+                                    return { ...f, telefono: `+${meta.country.dialCode}${prev.nationalNumber}`, telDisplay: '' }
+                                  }
+                                }
+                                return { ...f, telefono: v, telDisplay: meta?.inputValue || '' }
+                              })}
                               onBlur={blur('telefono')}
                               inputProps={{
                                 id: 'telefono', name: 'telefono', autoComplete: 'tel',
                                 enterKeyHint: 'next', ...aria,
-                                ref: (el) => { inputs.current.telefono = el },
+                                onPaste: (e) => {
+                                  /* Pasting a number that already carries +34 turned the
+                                     country code into subscriber digits. */
+                                  const raw = e.clipboardData.getData('text')
+                                  const parsed = parsePhoneNumberFromString(raw, 'ES')
+                                  if (parsed) {
+                                    e.preventDefault()
+                                    setForm((f) => ({ ...f, telefono: parsed.number, telDisplay: parsed.formatInternational() }))
+                                  }
+                                },
                               }}
                               countrySelectorStyleProps={{
                                 buttonClassName: 'pi__flag',
@@ -435,7 +493,7 @@ export default function App() {
                             ['Precio', productPrice(product)],
                             ['Nombre', form.nombre],
                             ...(form.caducidad ? [['Caduca', form.caducidad]] : []),
-                            ['Teléfono', prettyTel(form.telefono)],
+                            ['Teléfono', form.telDisplay || prettyTel(form.telefono)],
                             ['Correo', form.email],
                           ].map(([k, v], i) => (
                             <m.div

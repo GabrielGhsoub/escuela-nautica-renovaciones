@@ -267,8 +267,8 @@ h2:focus, .ask:focus { outline: none; }
 .fld:has(.pi) .fld__ok { right: .85rem; }
 .react-international-phone-country-selector-dropdown {
   z-index: 40; border-radius: 12px;
-  width: min(300px, calc(100vw - 2.5rem)) !important;
-  max-width: calc(100vw - 2.5rem);
+  width: min(300px, calc(100vw - 2.5rem - 42px)) !important;
+  max-width: calc(100vw - 2.5rem - 42px);
   top: calc(100% + 4px);
   box-shadow: 0 18px 42px -18px rgba(14,24,95,.4);
 }

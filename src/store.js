@@ -47,16 +47,28 @@ export function saveRequests(list) {
   try { sessionStorage.setItem(KEY, JSON.stringify(list)) } catch { /* private mode */ }
 }
 
-export function addRequest(req) {
+/* Upsert, not append. "Corregir mis datos" then sending again used to file a
+   SECOND request, so the panel listed the same person twice: the exact
+   duplicate-retyping problem this page is pitched as solving, reappearing
+   inside the demo, on the screen Dani will click around. */
+export function upsertRequest(id, req) {
   const list = loadRequests()
-  list.unshift({
+  const at = id ? list.findIndex((r) => r.id === id) : -1
+  if (at >= 0) {
+    list[at] = { ...list[at], ...req }
+    saveRequests(list)
+    return list[at].id
+  }
+  const fresh = {
     id: 'r-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
     status: 'pendiente',
     mine: true,
     ts: Date.now(),
     ...req,
-  })
+  }
+  list.unshift(fresh)
   saveRequests(list)
+  return fresh.id
 }
 
 export function setStatus(id, status) {
