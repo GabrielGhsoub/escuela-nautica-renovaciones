@@ -236,6 +236,8 @@ h2:focus, .ask:focus { outline: none; }
    through the custom properties it exposes, then override only the geometry. */
 .pi {
   width: 100%;
+  display: flex;
+  align-items: stretch;
   --react-international-phone-height: auto;
   --react-international-phone-font-size: 1rem;
   --react-international-phone-border-color: rgba(14,24,95,.32);
@@ -243,6 +245,9 @@ h2:focus, .ask:focus { outline: none; }
   --react-international-phone-border-radius: 12px;
   --react-international-phone-dropdown-item-height: 44px;
 }
+/* the library nests the button inside a block-level wrapper, so stretching
+   the button alone did nothing: the wrapper has to be a flex item too. */
+.pi .react-international-phone-country-selector { display: flex; align-self: stretch; }
 .pi .pi__flag {
   flex: 0 0 auto; align-self: stretch; height: auto; margin-right: 0;
   border: 1px solid rgba(14,24,95,.32); border-right: 0;
@@ -284,3 +289,13 @@ h2:focus, .ask:focus { outline: none; }
 
 /* 44px hit areas without moving the line box */
 .privacidad a, .done__admin a, .adm__contact a { padding-block: .72rem; margin-block: -.72rem; }
+
+/* Entrance only, and purely decorative: the panel's resting state is visible, so
+   a tab backgrounded mid-transition can never come back to an invisible form. */
+.stp { animation: stp-in .3s cubic-bezier(.22,1,.36,1); }
+.stp--back { animation-name: stp-back; }
+/* Transform only, never opacity. A paused or throttled animation holds its first
+   keyframe, so fading in from 0 would leave a backgrounded tab showing an
+   invisible form. Sliding from 34px is still fully legible at every frame. */
+@keyframes stp-in { from { transform: translateX(34px); } }
+@keyframes stp-back { from { transform: translateX(-34px); } }

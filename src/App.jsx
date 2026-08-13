@@ -62,14 +62,10 @@ const FLAGS_INLINE = defaultCountries.map((c) => {
   return { iso2, src: `data:image/svg+xml;utf8,${encodeURIComponent(svg)}` }
 })
 
-/* One shape for all three steps: the outgoing panel leaves the way the incoming
-   one arrives, so the flow reads as a single surface moving rather than three
-   screens replacing each other. */
-const slide = {
-  enter: (dir) => ({ opacity: 0, x: dir === 'back' ? -34 : 34 }),
-  in: { opacity: 1, x: 0, transition: { duration: 0.32, ease: EASE } },
-  exit: (dir) => ({ opacity: 0, x: dir === 'back' ? 34 : -34, transition: { duration: 0.2, ease: 'easeIn' } }),
-}
+/* Inline values, not variants: under LazyMotion the variant form silently never
+   resolved, leaving the outgoing panel at opacity 1 and the incoming one at 0.
+   The outgoing panel leaves the way the incoming one arrives, so the flow reads
+   as one surface moving rather than three screens replacing each other. */
 
 export default function App() {
   /* #admin is the other side of the counter. Hash, not a router: one listener
@@ -284,9 +280,9 @@ export default function App() {
                 </ol>
 
                 <div className="flow">
-                  <AnimatePresence custom={dir} initial={false}>
+                    <div key={step} className={`stp stp--${dir}`}>
                     {step === 0 && (
-                      <m.div key="a" custom={dir} variants={slide} initial="enter" animate="in" exit="exit">
+                      <div>
                         <h2 className="ask" tabIndex={-1} ref={ask}>¿Qué título necesitas renovar?</h2>
                         <div className="prods">
                           {products.map((p, i) => (
@@ -315,14 +311,11 @@ export default function App() {
                           </ul>
                           <a href={`mailto:${school.email}`}>{titulin.cta}</a>
                         </div>
-                      </m.div>
+                      </div>
                     )}
 
                     {step === 1 && (
-                      <m.form
-                        key="b" custom={dir} variants={slide} initial="enter" animate="in" exit="exit"
-                        noValidate onSubmit={submitDatos}
-                      >
+                      <form noValidate onSubmit={submitDatos}>
                         <h2 className="ask" tabIndex={-1} ref={ask}>Tus datos</h2>
                         <div className="recap">
                           {productLabel(product)} · {productPrice(product)}
@@ -379,7 +372,7 @@ export default function App() {
                         </div>
 
                         <Field
-                          id="telefono" label="Teléfono" hint="Es donde te contestaremos."
+                          id="telefono" label="Teléfono" hint="Es donde te contestaremos." alwaysFloat
                           value={form.telefono}
                           valid={checks.telefono}
                           error={errors.telefono} showError={showErr('telefono')}
@@ -430,11 +423,11 @@ export default function App() {
                           <button type="button" className="btn btn--ghost" onClick={() => go(0)}>Atrás</button>
                           <button type="submit" className="btn btn--primary">Continuar</button>
                         </div>
-                      </m.form>
+                      </form>
                     )}
 
                     {step === 2 && (
-                      <m.div key="c" custom={dir} variants={slide} initial="enter" animate="in" exit="exit">
+                      <div>
                         <h2 className="ask" tabIndex={-1} ref={ask}>Revisa y envía</h2>
                         <dl className="review">
                           {[
@@ -466,9 +459,9 @@ export default function App() {
                             Enviar solicitud
                           </button>
                         </div>
-                      </m.div>
+                      </div>
                     )}
-                  </AnimatePresence>
+                    </div>
                 </div>
               </m.section>
             )}

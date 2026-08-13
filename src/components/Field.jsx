@@ -6,10 +6,12 @@ import { AnimatePresence } from 'motion/react'
 import * as m from 'motion/react-m'
 
 const Field = forwardRef(function Field(
-  { id, label, hint, optional, value, error, showError, valid, onChange, onBlur, children, ...rest },
+  { id, label, hint, optional, value, error, showError, valid, alwaysFloat, onChange, onBlur, children, ...rest },
   ref,
 ) {
-  const filled = String(value ?? '').length > 0
+  /* The phone control always displays a dial code even before our state holds
+     anything, so the label has to float from the start or it prints over it. */
+  const filled = alwaysFloat || String(value ?? '').length > 0
   const bad = showError && Boolean(error)
   /* The phone field renders a third-party input through `children`, so the aria
      wiring cannot live only on our own <input> branch: without this the screen
