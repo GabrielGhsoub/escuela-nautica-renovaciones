@@ -233,7 +233,6 @@ img {
 :focus-visible {
   outline: 3px solid var(--blue-bright);
   outline-offset: 3px;
-  border-radius: 6px;
 }
 
 @media (prefers-reduced-motion: reduce) {
