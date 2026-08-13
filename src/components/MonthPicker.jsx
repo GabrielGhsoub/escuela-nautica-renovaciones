@@ -4,7 +4,8 @@
    Twelve months plus a year strip is two taps on a phone; a day grid is three
    and invites a wrong answer. Typing still works, and the mask still runs. */
 import { useEffect, useMemo, useRef } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
+import * as m from 'motion/react-m'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -13,7 +14,7 @@ export default function MonthPicker({ open, value, onPick, onClose, anchorId }) 
   const now = new Date()
   const parsed = useMemo(() => {
     const m = /^(\d{2})\/(\d{4})$/.exec(value || '')
-    return m ? { mes: Number(m[1]), anio: Number(m[2]) } : { mes: 0, anio: now.getFullYear() }
+    return m ? { mes: Number(m[1]), anio: Number(m[2]), set: true } : { mes: 0, anio: now.getFullYear(), set: false }
   }, [value, now])
 
   /* Years a real título can carry: renewals run five years, and people arrive
@@ -31,7 +32,7 @@ export default function MonthPicker({ open, value, onPick, onClose, anchorId }) 
     function onDown(e) {
       if (box.current && !box.current.contains(e.target) && e.target.id !== anchorId) onClose()
     }
-    function onKey(e) { if (e.key === 'Escape') onClose() }
+    function onKey(e) { if (e.key === 'Escape') { onClose(); document.getElementById(anchorId)?.focus() } }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
     return () => {
@@ -43,10 +44,11 @@ export default function MonthPicker({ open, value, onPick, onClose, anchorId }) 
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <m.div
           ref={box}
           className="mp"
-          role="dialog"
+          id="mp-caducidad"
+          role="group"
           aria-label="Elegir mes y año de caducidad"
           initial={{ opacity: 0, y: -6, scale: .97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -57,8 +59,8 @@ export default function MonthPicker({ open, value, onPick, onClose, anchorId }) 
             {years.map((y) => (
               <button
                 key={y} type="button"
-                className={`mp__year${y === parsed.anio ? ' is-on' : ''}`}
-                aria-pressed={y === parsed.anio}
+                className={`mp__year${parsed.set && y === parsed.anio ? ' is-on' : ''}`}
+                aria-pressed={parsed.set && y === parsed.anio}
                 onClick={() => onPick(parsed.mes ? String(parsed.mes).padStart(2, '0') : '01', y)}
               >
                 {y}
@@ -74,14 +76,14 @@ export default function MonthPicker({ open, value, onPick, onClose, anchorId }) 
                   key={m} type="button"
                   className={`mp__month${on ? ' is-on' : ''}`}
                   aria-pressed={on}
-                  onClick={() => { onPick(mm, parsed.anio); onClose() }}
+                  onClick={() => { onPick(mm, parsed.anio); onClose(); document.getElementById(anchorId)?.focus() }}
                 >
                   {m}
                 </button>
               )
             })}
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   )

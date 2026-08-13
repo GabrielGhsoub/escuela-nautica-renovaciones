@@ -18,8 +18,9 @@
    Nothing here states a policy the school has not published: not how or when
    they confirm, not when payment happens, not how documents are handed over. */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, MotionConfig, motion } from 'motion/react'
-import { PhoneInput } from 'react-international-phone'
+import { AnimatePresence, LazyMotion, MotionConfig, domAnimation } from 'motion/react'
+import * as m from 'motion/react-m'
+import { PhoneInput, defaultCountries, parseCountry } from 'react-international-phone'
 import 'react-international-phone/style.css'
 import {
   documents, included, productLabel, productPrice, products, school, titulin,
@@ -36,6 +37,30 @@ const STEPS = ['Qué necesitas', 'Tus datos', 'Enviar']
 const BLANK = { nombre: '', telefono: '', email: '', caducidad: '' }
 const ORDER = ['nombre', 'caducidad', 'telefono', 'email']
 const EASE = [0.22, 1, 0.36, 1]
+
+const REGION_ES = (() => {
+  try { return new Intl.DisplayNames(['es'], { type: 'region' }) } catch { return null }
+})()
+const COUNTRIES_ES = defaultCountries.map((c) => {
+  const p = parseCountry(c)
+  const name = REGION_ES?.of(p.iso2.toUpperCase())
+  if (!name || name === p.iso2.toUpperCase()) return c
+  const next = [...c]
+  next[0] = name
+  return next
+})
+
+/* The library's default flags are 218 PNGs fetched from a public CDN. This page
+   tells the visitor their data stays in their browser, so opening a country list
+   must not hand their IP to a third party. Each flag becomes an inline SVG data
+   URI holding the country's own emoji: no network, no build step. */
+const FLAGS_INLINE = defaultCountries.map((c) => {
+  const iso2 = parseCountry(c).iso2
+  const emoji = iso2.toUpperCase().replace(/./g, (ch) =>
+    String.fromCodePoint(127397 + ch.charCodeAt(0)))
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text x="12" y="18" font-size="18" text-anchor="middle">${emoji}</text></svg>`
+  return { iso2, src: `data:image/svg+xml;utf8,${encodeURIComponent(svg)}` }
+})
 
 /* One shape for all three steps: the outgoing panel leaves the way the incoming
    one arrives, so the flow reads as a single surface moving rather than three
@@ -64,6 +89,16 @@ export default function App() {
   const [showErrors, setShowErrors] = useState(false)
   const [sent, setSent] = useState(false)
   const [calOpen, setCalOpen] = useState(false)
+
+  /* The library hardcodes aria-label="Country selector" in English. The option
+     names localize through the `countries` prop, but the trigger does not, so
+     it is the one string left announcing English on a lang="es" page. */
+  const phoneBox = useRef(null)
+  useEffect(() => {
+    if (step !== 1) return
+    const btn = phoneBox.current?.querySelector('.pi__flag')
+    if (btn) btn.setAttribute('aria-label', 'Elegir país')
+  }, [step])
 
   const product = products.find((p) => p.key === picked)
 
@@ -145,6 +180,7 @@ export default function App() {
   if (view === 'admin') return <Admin />
 
   return (
+    <LazyMotion features={domAnimation} strict>
     <MotionConfig reducedMotion="user">
       <div className="page">
         <header className="top">
@@ -175,8 +211,8 @@ export default function App() {
           <div className="swap">
           <AnimatePresence initial={false}>
             {sent ? (
-              <motion.section
-                key="done" className="panel done" role="status"
+              <m.section
+                key="done" className="panel done"
                 initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: EASE }}
               >
@@ -184,14 +220,14 @@ export default function App() {
                   Demostración: no se ha enviado ningún mensaje real y la escuela no ha
                   recibido nada.
                 </p>
-                <motion.div
+                <m.div
                   className="done__tick" aria-hidden="true"
                   initial={{ scale: 0.3, rotate: -14, opacity: 0 }}
                   animate={{ scale: 1, rotate: 0, opacity: 1 }}
                   transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.1 }}
                 >
                   ✓
-                </motion.div>
+                </m.div>
                 <h2 tabIndex={-1} ref={ask}>Así se vería la confirmación</h2>
                 <p className="done__what">
                   <strong>{productLabel(product)}</strong>{' · '}{productPrice(product)}
@@ -220,9 +256,9 @@ export default function App() {
                     Hacer otra solicitud
                   </button>
                 </div>
-              </motion.section>
+              </m.section>
             ) : (
-              <motion.section
+              <m.section
                 key="flow" className="panel"
                 initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: EASE }}
@@ -234,13 +270,13 @@ export default function App() {
                       className={i === step ? 'is-now' : i < step ? 'is-done' : ''}
                       aria-current={i === step ? 'step' : undefined}
                     >
-                      <motion.span
+                      <m.span
                         aria-hidden="true"
                         animate={{ scale: i === step ? [0.6, 1] : 1 }}
                         transition={{ type: 'spring', stiffness: 500, damping: 18 }}
                       >
                         {i < step ? '✓' : i + 1}
-                      </motion.span>
+                      </m.span>
                       {s}
                       {i < step && <span className="visually-hidden">completado</span>}
                     </li>
@@ -250,11 +286,11 @@ export default function App() {
                 <div className="flow">
                   <AnimatePresence custom={dir} initial={false}>
                     {step === 0 && (
-                      <motion.div key="a" custom={dir} variants={slide} initial="enter" animate="in" exit="exit">
+                      <m.div key="a" custom={dir} variants={slide} initial="enter" animate="in" exit="exit">
                         <h2 className="ask" tabIndex={-1} ref={ask}>¿Qué título necesitas renovar?</h2>
                         <div className="prods">
                           {products.map((p, i) => (
-                            <motion.button
+                            <m.button
                               key={p.key} type="button"
                               className={`prod${picked === p.key ? ' is-on' : ''}`}
                               aria-pressed={picked === p.key}
@@ -268,7 +304,7 @@ export default function App() {
                               <strong>{p.title}</strong>
                               <em>{p.full}</em>
                               <span>{productPrice(p)}</span>
-                            </motion.button>
+                            </m.button>
                           ))}
                         </div>
                         <div className="titulin">
@@ -279,11 +315,11 @@ export default function App() {
                           </ul>
                           <a href={`mailto:${school.email}`}>{titulin.cta}</a>
                         </div>
-                      </motion.div>
+                      </m.div>
                     )}
 
                     {step === 1 && (
-                      <motion.form
+                      <m.form
                         key="b" custom={dir} variants={slide} initial="enter" animate="in" exit="exit"
                         noValidate onSubmit={submitDatos}
                       >
@@ -293,7 +329,7 @@ export default function App() {
                         </div>
 
                         <div className="prog" aria-hidden="true">
-                          <motion.div
+                          <m.div
                             className="prog__bar"
                             animate={{ width: `${progress}%` }}
                             transition={{ duration: 0.4, ease: EASE }}
@@ -326,6 +362,7 @@ export default function App() {
                           <button
                             type="button" className="fld__cal" id="cal-btn"
                             aria-label="Elegir mes y año en un calendario"
+                            aria-haspopup="true" aria-controls="mp-caducidad"
                             aria-expanded={calOpen}
                             onClick={() => setCalOpen((o) => !o)}
                           >
@@ -347,19 +384,29 @@ export default function App() {
                           valid={checks.telefono}
                           error={errors.telefono} showError={showErr('telefono')}
                         >
-                          <PhoneInput
-                            defaultCountry="es"
-                            value={form.telefono}
-                            onChange={(v) => setForm({ ...form, telefono: v })}
-                            onBlur={blur('telefono')}
-                            inputProps={{
-                              id: 'telefono', name: 'telefono', autoComplete: 'tel', enterKeyHint: 'next',
-                              ref: (el) => { inputs.current.telefono = el },
-                            }}
-                            countrySelectorStyleProps={{ buttonClassName: 'pi__flag' }}
-                            inputClassName="fld__input pi__input"
-                            className="pi"
-                          />
+                          {(aria) => (
+                            <div ref={phoneBox} className="pi__host">
+                            <PhoneInput
+                              defaultCountry="es"
+                              countries={COUNTRIES_ES}
+                              flags={FLAGS_INLINE}
+                              value={form.telefono}
+                              onChange={(v) => setForm({ ...form, telefono: v })}
+                              onBlur={blur('telefono')}
+                              inputProps={{
+                                id: 'telefono', name: 'telefono', autoComplete: 'tel',
+                                enterKeyHint: 'next', ...aria,
+                                ref: (el) => { inputs.current.telefono = el },
+                              }}
+                              countrySelectorStyleProps={{
+                                buttonClassName: 'pi__flag',
+                                buttonContentWrapperClassName: 'pi__flagwrap',
+                              }}
+                              inputClassName="fld__input pi__input"
+                              className="pi"
+                            />
+                            </div>
+                          )}
                         </Field>
 
                         <Field
@@ -383,11 +430,11 @@ export default function App() {
                           <button type="button" className="btn btn--ghost" onClick={() => go(0)}>Atrás</button>
                           <button type="submit" className="btn btn--primary">Continuar</button>
                         </div>
-                      </motion.form>
+                      </m.form>
                     )}
 
                     {step === 2 && (
-                      <motion.div key="c" custom={dir} variants={slide} initial="enter" animate="in" exit="exit">
+                      <m.div key="c" custom={dir} variants={slide} initial="enter" animate="in" exit="exit">
                         <h2 className="ask" tabIndex={-1} ref={ask}>Revisa y envía</h2>
                         <dl className="review">
                           {[
@@ -398,13 +445,13 @@ export default function App() {
                             ['Teléfono', prettyTel(form.telefono)],
                             ['Correo', form.email],
                           ].map(([k, v], i) => (
-                            <motion.div
+                            <m.div
                               key={k}
                               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: i * 0.04, duration: 0.3, ease: EASE }}
                             >
                               <dt>{k}</dt><dd>{v}</dd>
-                            </motion.div>
+                            </m.div>
                           ))}
                         </dl>
                         <div className="docs">
@@ -419,11 +466,11 @@ export default function App() {
                             Enviar solicitud
                           </button>
                         </div>
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                 </div>
-              </motion.section>
+              </m.section>
             )}
           </AnimatePresence>
           </div>
@@ -444,5 +491,6 @@ export default function App() {
         </footer>
       </div>
     </MotionConfig>
+    </LazyMotion>
   )
 }
