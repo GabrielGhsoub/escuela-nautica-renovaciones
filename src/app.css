@@ -24,8 +24,8 @@ body { background: var(--sand); color: var(--ink); font-family: var(--body); mar
 .steps li.is-done span { background: var(--navy); color: #fff; }
 
 .ask { font-family: var(--display); font-size: 1.2rem; font-weight: 600; margin: 0 0 1.1rem; color: var(--navy); }
-.prods { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: .8rem; }
-.prod { text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 1rem; cursor: pointer; display: grid; gap: .18rem; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.prods { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: .8rem; }
+.prod { font: inherit; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 1rem; cursor: pointer; display: grid; grid-template-rows: auto 1fr auto; gap: .18rem; transition: border-color .15s, box-shadow .15s, transform .15s; }
 .prod:hover { border-color: var(--blue); transform: translateY(-2px); box-shadow: var(--shadow); }
 .prod.is-on { border-color: var(--blue); background: var(--foam); box-shadow: 0 0 0 2px var(--blue) inset; }
 .prod strong { font-family: var(--display); font-size: 1.05rem; color: var(--navy); }
@@ -98,3 +98,23 @@ h2:focus, .ask:focus { outline: none; }
 .done { animation: rise .32s cubic-bezier(.22,1,.36,1) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .done { animation: none; } }
+
+/* Links were 17-25px tall: the header phone, the footer phone and email, and
+   the titulin link. On a phone-first page the tel: link is the one control that
+   most needs a thumb-sized target. */
+.top__phone { display: inline-flex; align-items: center; min-height: 44px; padding-inline: .6rem; margin-inline: -.6rem; }
+.titulin a, .foot a { display: inline-flex; align-items: center; min-height: 44px; }
+.foot a[href^="tel:"] { white-space: nowrap; }
+
+/* Under 400px the brand wrapped to four lines and the header grew to 123px;
+   the stepper wrapped to two rows below 409px; between them they pushed the
+   first product button to y=662 on a 375px phone, below the fold. */
+@media (max-width: 420px) {
+  .top__brand strong { font-size: .92rem; }
+  .top__brand em { display: none; }
+  .steps { gap: .6rem; font-size: .78rem; }
+  .steps li span { width: 20px; height: 20px; }
+  .intro h1 { margin-bottom: .5rem; }
+  .intro__lede { font-size: .98rem; }
+  .intro__included { font-size: .84rem; padding: .7rem .85rem; }
+}
