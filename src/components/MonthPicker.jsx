@@ -28,6 +28,12 @@ export default function MonthPicker({ open, value, onPick, onClose, anchorId }) 
   yearRef.current = parsed.anio
 
   useEffect(() => {
+    if (!open) return
+    box.current?.querySelector('.mp__year.is-on')?.scrollIntoView({ inline: 'center', block: 'nearest' })
+    box.current?.scrollIntoView({ block: 'nearest' })
+  }, [open, parsed.anio])
+
+  useEffect(() => {
     if (!open) return undefined
     function onDown(e) {
       if (box.current && !box.current.contains(e.target) && e.target.id !== anchorId) onClose()
