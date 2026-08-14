@@ -11,18 +11,15 @@ export const school = {
   privacyUrl: 'https://escuelanauticadevalencia.es/politica-de-privacidad/',
 };
 
-/* Their page states the renewal price two different ways: the prose says
-   "desde 99 €" four separate times, the table underneath lists a flat
-   "PNB: 99 € PER: 99 € Patrón de Yate: 99 € Capitán de Yate: 99 €".
-   We show the more cautious of the two, because "desde" exists precisely to
-   allow a case to cost more and we must not promise a price on their behalf.
-   Worth asking them which one is real. The duplicate is flat in both places:
-   "en caso de extravío o deterioro, el duplicado tiene un coste de 49 €". */
+/* Prices are FIXED, confirmed by Dani in writing on 2026-08-14: "el 'desde' ya
+   está corregido en la web. Es precio fijo." Re-verified on their live page the
+   same day: every renewal now reads "tiene un coste de 99 €" with no "desde"
+   anywhere, and the duplicate stays "el duplicado tiene un coste de 49 €". */
 export const products = [
-  { key: 'pnb', title: 'PNB', full: 'Patrón de Navegación Básica', price: 99, from: true, kind: 'renovacion' },
-  { key: 'per', title: 'PER', full: 'Patrón de Embarcaciones de Recreo', price: 99, from: true, kind: 'renovacion' },
-  { key: 'py', title: 'PY', full: 'Patrón de Yate', price: 99, from: true, kind: 'renovacion' },
-  { key: 'cy', title: 'CY', full: 'Capitán de Yate', price: 99, from: true, kind: 'renovacion' },
+  { key: 'pnb', title: 'PNB', full: 'Patrón de Navegación Básica', price: 99, from: false, kind: 'renovacion' },
+  { key: 'per', title: 'PER', full: 'Patrón de Embarcaciones de Recreo', price: 99, from: false, kind: 'renovacion' },
+  { key: 'py', title: 'PY', full: 'Patrón de Yate', price: 99, from: false, kind: 'renovacion' },
+  { key: 'cy', title: 'CY', full: 'Capitán de Yate', price: 99, from: false, kind: 'renovacion' },
   {
     key: 'duplicado',
     title: 'Duplicado',
